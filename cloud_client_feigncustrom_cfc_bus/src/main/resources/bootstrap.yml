@@ -1,0 +1,89 @@
+#当使用 Spring Cloud Config Server 的时候
+#你应该在 bootstrap.yml 里面指定 spring.application.name 和 spring.cloud.config.server的一些信息和一些加密/解密的信息
+#当使用 Spring Cloud 的时候，配置信息一般是从 config server 加载的
+#为了取得配置信息（比如密码等），你需要一些提早的或引导配置。因此，把 config server 信息放在 bootstrap.yml，用来加载真正需要的配置信息
+#bootstrap.yml（bootstrap.properties）用来程序引导时执行，应用于更加早期配置信息读取，如可以使用来配置application.yml中使用到参数等
+#application.yml（application.properties) 应用程序特有配置信息，可以用来配置后续各个模块中需使用的公共参数等
+#bootstrap.yml 先于 application.yml 加载
+
+spring:
+  #使用spring-cloud-bus消息总线进行配置文件自动更新
+  #可以使用rabbitmq
+  #当pom文件加入spring-cloud-starter-bus-amqp，然后配置一下rabbitmq或者kafka就好了，然后配合@RefreshScope
+  #Spring Cloud Netflix Bus是Spring Cloud的消息机制,
+  #当Git Repository 改变时,通过POST请求Config Server的/bus/refresh,
+  #Config Server 会从repository获取最新的信息并通过amqp传递给client
+  rabbitmq:
+     host: 127.0.0.1
+     port: 5672
+     username: admin
+     password: 123456
+  application:
+    #未配置spring.application.name 或者 eureka.instance.appname 属性。如果这两个属性均不配置，
+    #就会导致eureka server上的应用名称 UNKNOWN 的问题
+    #应用程序名称，可作为微服务的名字
+    name: feign-custrom
+    
+    #获取git上的配置文件时：举例项目名application.name为eurekaclient-rs时 启动后会有下面的显示
+    #Located property source: CompositePropertySource [name='configService', propertySources=[MapPropertySource [name='configClient'], MapPropertySource 
+    #[name='https://github.com/mozartzzx/pro/eurekaclient-rs/eurekaclient-rs-devserver1.yml'], 
+    #MapPropertySource [name='https://github.com/mozartzzx/pro/eurekaclient-rs/application-devserver1.yml']]]
+    #可见eurekaclient-rs目录下的eurekaclient-rs-devserver1.yml和application-devserver1.yml都会被搜出来，
+    #好像是优先使用eurekaclient-rs-devserver1.yml这个
+  cloud:
+    config:
+      #Config server的uri，我们用这里用discovery的形势
+      #uri: http://localhost:7001/
+      #指定的环境
+      profile: devserver1
+      #指定分支,默认使用master
+      label: master
+      #对应的文件说明
+      #/{application}-{profile}.yml
+      #/{label}/{application}-{profile}.yml
+      #/{application}-{profile}.properties
+      #/{label}/{application}-{profile}.properties
+      discovery:
+        #开启配置服务发现
+        enabled: true
+        #配置中心服务名                  
+        serviceId: config-server-bus
+
+management:
+  security:
+    enabled: false     #SpringBoot 1.5.X 以上默认开通了安全认证，如果不关闭会要求权限
+    
+    
+eureka:
+  
+
+  instance:
+    #设置当前实例的主机名称 使用  主机IP   
+    hostname: ${spring.cloud.client.ipAddress}
+    prefer-ip-address: true
+    #运行阶段执行健康检查的目的是为了从Eureka服务器注册表中识别(如果没开自我保护机制会删除。开了会保护)不可访问的微服务并更新服务实例列表 ；
+    #Eureka 服务器并不是向客户端发送心跳请求，而是反过来，Eureka 客户端将心跳发送到Eureka服务器，让服务器了解其状态。
+    #默认情况下Eureka客户会每隔30秒发送一次心跳来续约。 通过续约来告知Eureka Server该Eureka客户仍然存在，没有出现问题。 
+    #默认情况下，如果Eureka Server在90秒没有收到Eureka客户的续约，它会将实例从其注册表中删除（如果没有开启保护机制的话）
+    # renewal(续约。重申 的意思)
+    #用于定义服务续约任务的调用间隔时间，默认30秒
+    lease-renewal-interval-in-seconds: 30
+    #用于定义服务失效的时间（续约到期时间），默认为90秒   expiration(截止)
+    lease-expiration-duration-in-seconds: 90
+    
+  client:
+    #eureka 会默认把自己也当作服务注册，这在以后做高可用的时候会用到
+    #可以通过下面两行来禁用掉；但是 PRD 环境 需要服务中心高可用，如果只有一个服务中心，服务中心那么服务就不课用了，所以要把自己也注册到service-url.defaultZone
+    #register-with-eureka: false
+    #fetch-registry: false
+    #若是未禁用eureka服务注册中心的客户端注册行为，需提供service-url注册中心地址
+    service-url:
+      #高可用需要有多个服务中心，那么就需要写多个，把自己注册上去
+      defaultZone: http://127.0.0.1:8001/eureka/,http://127.0.0.1:8002/eureka/
+      #开启健康检查  eureka.client.healthcheck.enabled=true
+      #必须设置在application.yml中，而不能设置在bootstrap.yml 中，否则一些场景下会导致应用状态 UNKNOWN 的问题
+
+    
+    
+
+
