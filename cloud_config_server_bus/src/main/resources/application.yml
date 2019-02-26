@@ -1,0 +1,97 @@
+server:
+  #项目端口
+  port: 8015
+  #＃应用程序的上下文路径
+  #context-path: /myeurekaserver
+management:
+  security:
+    #SpringBoot 1.5.X 以上默认开通了安全认证，如果不关闭会要求权限
+    #这样用bus的时候会叫你验证
+    enabled: false     
+spring:
+  application:
+    #未配置spring.application.name 或者 eureka.instance.appname 属性。如果这两个属性均不配置，
+    #就会导致eureka server上的应用名称 UNKNOWN 的问题
+    #应用程序名称
+    name: config-server-bus
+
+  #使用spring-cloud-bus消息总线进行配置文件自动更新
+  #可以使用rabbitmq
+  #当pom文件加入spring-cloud-starter-bus-amqp，然后配置一下rabbitmq或者kafka就好了
+  #Spring Cloud Netflix Bus是Spring Cloud的消息机制,
+  #当Git Repository 改变时,通过POST请求Config Server的/bus/refresh,
+  #Config Server 会从repository获取最新的信息并通过amqp传递给client
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    username: admin
+    password: 123456
+  cloud:
+    config:
+      server:
+        #占位符配置url {application},{profile},{label}
+        #这些占位符除了用于标识配置文件的规则之外，还可以用于config Server中对git仓库地址的url配置
+        #比如{application}代表了应用名，所以当客户端应用向config server发起获取配置的请求时，
+        #Config server会根据客户端的spring.application.name信息来填充{application}占位符以定位配置资源的存储位置
+        #从而实现根据微服务应用的属性动态获取不同的配置
+        git:
+          #uri: https://github.com/mozartzzx/pro/{application}
+          #我试了一下写在uri上面客户端访问，没有用，难受；所以就写search-paths里面了
+          #org.springframework.cloud.config.server.environment.NoSuchRepositoryException: Cannot clone or checkout repository什么uri: https://github.com/mozartzzx/pro.git，试了也没用
+          #说什么rui后面加git也没有用
+          uri: https://github.com/mozartzzx/pro/
+          #git仓库地址下的相对地址，可以配置多个，用,分割；用于匹配查询的路径名;
+          #如果配置了，就查询的路径就是 rui+search-paths  
+          #使用   application的要加''，不然就没用了，不知道上面的uri是不是也是这样；
+          search-paths: '{application}'
+          #百度上有人说org.springframework.cloud.config.server.environment.NoSuchRepositoryException: Cannot clone or checkout repository
+          #因为https请求https 走的是http+ssl 协议，如果你的证书没有注册的话就会产生安全方面的问题，就会导致你会被拒绝。
+          #我试了也没有用
+          skip-ssl-validation: true
+          # git仓库的账号
+          #username: username
+          # git仓库的密码
+          #password: password 
+          #百度有人说网络原因导致org.springframework.cloud.config.server.environment.NoSuchRepositoryException: Cannot clone or checkout repository
+          #进行cloud官网说的代理，我试了没有用
+          #结果踏马的老子重新开了个eclipse的工作目录就有用了；郁闷了半天
+          proxy:
+            https:
+              host: my-proxy.host.io
+              password: myproxypassword
+              port: 3128
+              username: myproxyusername
+              nonProxyHosts: example.com                                  
+eureka:
+  
+
+  instance:
+    #设置当前实例的主机名称 使用  主机IP   
+    hostname: ${spring.cloud.client.ipAddress}
+    prefer-ip-address: true
+    #运行阶段执行健康检查的目的是为了从Eureka服务器注册表中识别(如果没开自我保护机制会删除。开了会保护)不可访问的微服务并更新服务实例列表 ；
+    #Eureka 服务器并不是向客户端发送心跳请求，而是反过来，Eureka 客户端将心跳发送到Eureka服务器，让服务器了解其状态。
+    #默认情况下Eureka客户会每隔30秒发送一次心跳来续约。 通过续约来告知Eureka Server该Eureka客户仍然存在，没有出现问题。 
+    #默认情况下，如果Eureka Server在90秒没有收到Eureka客户的续约，它会将实例从其注册表中删除（如果没有开启保护机制的话）
+    # renewal(续约。重申 的意思)
+    #用于定义服务续约任务的调用间隔时间，默认30秒
+    lease-renewal-interval-in-seconds: 30
+    #用于定义服务失效的时间（续约到期时间），默认为90秒   expiration(截止)
+    lease-expiration-duration-in-seconds: 90
+    
+  client:
+    #eureka 会默认把自己也当作服务注册，这在以后做高可用的时候会用到
+    #可以通过下面两行来禁用掉；但是 PRD 环境 需要服务中心高可用，如果只有一个服务中心，服务中心那么服务就不课用了，所以要把自己也注册到service-url.defaultZone
+    #register-with-eureka: false
+    #fetch-registry: false
+    #若是未禁用eureka服务注册中心的客户端注册行为，需提供service-url注册中心地址
+    service-url:
+      #高可用需要有多个服务中心，那么就需要写多个，把自己注册上去
+      defaultZone: http://127.0.0.1:8001/eureka/,http://127.0.0.1:8002/eureka/
+    healthcheck:
+      #开启健康检查  eureka.client.healthcheck.enabled=true
+      #必须设置在application.yml中，而不能设置在bootstrap.yml 中，否则一些场景下会导致应用状态 UNKNOWN 的问题
+      enabled: false 
+    
+    
+
