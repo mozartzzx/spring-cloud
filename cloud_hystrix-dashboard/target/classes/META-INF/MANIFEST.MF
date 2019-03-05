@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Implementation-Title: cloud_eureka_server
+Implementation-Version: 0.0.1-SNAPSHOT
+Built-By: zxzheng
+Implementation-Vendor-Id: com.zzx.ooo
+Build-Jdk: 1.8.0_181
+Implementation-URL: http://projects.spring.io/spring-boot/cloud_hystri
+ x-dashboard/
+Created-By: Maven Integration for Eclipse
+Implementation-Vendor: Pivotal Software, Inc.
+
